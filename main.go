@@ -13,7 +13,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 
-	miner := src.NewAwesomeRepository()
+	app := src.NewAwesomeRepository()
 
-	miner.Run()
+	app.Run()
 }
