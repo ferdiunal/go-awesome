@@ -1,6 +1,5 @@
 # Contents
 
-- [Contents](##contents)
 - [Audio and Music](#audio-and-music)
 - [Authentication and OAuth](#authentication-and-oauth)
 - [Blockchain](#blockchain)

@@ -76,12 +76,13 @@ func (m *AwesomeRepository) Run() {
 										return
 									}
 								}
-
-								categories = append(categories, Category{
-									Title: title,
-									Url:   e.Request.AbsoluteURL(url),
-									Hash:  fmt.Sprintf("#%s", url),
-								})
+								if title != "Contents" {
+									categories = append(categories, Category{
+										Title: title,
+										Url:   e.Request.AbsoluteURL(url),
+										Hash:  fmt.Sprintf("#%s", url),
+									})
+								}
 
 							})
 						})
