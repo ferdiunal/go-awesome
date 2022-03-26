@@ -28,18 +28,14 @@ type AwesomeRepository struct {
 type Category struct {
 	Title string
 	Url   string
+	Hash  string
 }
 
 type Repo struct {
-	Title            string
-	Description      string
-	Url              string
-	ForksCount       int
-	NetworkCount     int
-	OpenIssuesCount  int
-	StargazersCount  int
-	SubscribersCount int
-	WatchersCount    int
+	Title           string
+	Description     string
+	Url             string
+	StargazersCount int
 }
 
 type Repositories struct {
@@ -55,6 +51,12 @@ func (m *AwesomeRepository) Run() {
 		colly.Async(true),
 	)
 
+	blockTitles := []string{
+		"Parsers/Encoders/Decoders",
+		"Utility/Miscellaneous",
+		"MiddlewaresActual middlewaresLibraries for creating HTTP middlewares",
+	}
+
 	c.OnHTML("#content", func(e *colly.HTMLElement) {
 		e.ForEach("ul", func(i int, h *colly.HTMLElement) {
 			if i == 0 {
@@ -63,15 +65,22 @@ func (m *AwesomeRepository) Run() {
 						l.ForEach("ul", func(iii int, ul *colly.HTMLElement) {
 							ul.ForEach("li", func(iiii int, li *colly.HTMLElement) {
 								title := strings.Trim(li.DOM.Find("a").Text(), " ")
-								url := e.Request.AbsoluteURL(li.DOM.Find("a").AttrOr("href", ""))
-								for _, category := range categories {
-									if category.Title == title {
+								url := li.DOM.Find("a").AttrOr("href", "")
+								for _, blockTitle := range blockTitles {
+									if strings.Contains(title, blockTitle) {
 										return
 									}
 								}
+								for _, category := range categories {
+									if strings.Contains(title, category.Title) {
+										return
+									}
+								}
+
 								categories = append(categories, Category{
 									Title: title,
-									Url:   url,
+									Url:   e.Request.AbsoluteURL(url),
+									Hash:  fmt.Sprintf("#%s", url),
 								})
 
 							})
@@ -86,12 +95,13 @@ func (m *AwesomeRepository) Run() {
 
 	c.Wait()
 
+	markdownFileData := "# Contents\n\n"
+
 	for _, category := range categories {
+		markdownFileData += fmt.Sprintf("- %s\n", Link(category.Title, category.Hash))
 		m.FetchingRepo(category)
 		time.Sleep(time.Second * 1)
 	}
-
-	markdownFileData := ""
 
 	for _, repositories := range getRepositories {
 		title := Title(repositories.Title)
@@ -103,6 +113,9 @@ func (m *AwesomeRepository) Run() {
 
 		markdownFileData += fmt.Sprintf("%s\n%s%s\n\n", title, tableHeader, tableBody)
 	}
+
+	markdownFileData += "\n# ---\n\n## License\n\n"
+	markdownFileData += "The MIT License (MIT). Please see [License File](LICENSE.md) for more information.\n\n"
 
 	generateMarkdown([]byte(markdownFileData))
 }
@@ -133,6 +146,8 @@ func (m *AwesomeRepository) FetchingRepo(category Category) {
 			})
 		}
 
+		fmt.Println(repositories)
+
 		getRepositories = append(getRepositories, repositories)
 	})
 
@@ -142,20 +157,19 @@ func (m *AwesomeRepository) FetchingRepo(category Category) {
 }
 
 func emptyRepo(title, repoUrl string) *Repo {
+
 	return &Repo{
-		Title:            title,
-		Url:              repoUrl,
-		Description:      "",
-		ForksCount:       0,
-		NetworkCount:     0,
-		OpenIssuesCount:  0,
-		StargazersCount:  0,
-		SubscribersCount: 0,
-		WatchersCount:    0,
+		Title:           title,
+		Url:             repoUrl,
+		Description:     "",
+		StargazersCount: 0,
 	}
 }
 
 func (m *AwesomeRepository) fetchGithubInfo(title, repoUrl string) *Repo {
+
+	title = SpaceCleaner(title)
+
 	u, _ := url.Parse(repoUrl)
 
 	if u.Host != "github.com" {
@@ -181,15 +195,10 @@ func (m *AwesomeRepository) fetchGithubInfo(title, repoUrl string) *Repo {
 	}
 	fmt.Println("Fetched:", repoUrl)
 	return &Repo{
-		Title:            repo.GetFullName(),
-		Description:      repo.GetDescription(),
-		Url:              repo.GetHTMLURL(),
-		ForksCount:       repo.GetForksCount(),
-		NetworkCount:     repo.GetNetworkCount(),
-		OpenIssuesCount:  repo.GetOpenIssuesCount(),
-		StargazersCount:  repo.GetStargazersCount(),
-		SubscribersCount: repo.GetSubscribersCount(),
-		WatchersCount:    repo.GetWatchersCount(),
+		Title:           repo.GetFullName(),
+		Description:     repo.GetDescription(),
+		Url:             repo.GetHTMLURL(),
+		StargazersCount: repo.GetStargazersCount(),
 	}
 }
 
@@ -202,7 +211,7 @@ func NewAwesomeRepository() AwesomeRepositoryInterface {
 
 	githubClient := github.NewClient(tokenClient)
 	return &AwesomeRepository{
-		URL:     os.Getenv("MINER_URL"),
+		URL:     os.Getenv("REMOTE_URL"),
 		Github:  githubClient,
 		Context: context,
 	}

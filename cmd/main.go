@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/ferdiunal/go-awesome/src"
+	"github.com/ferdiunal/go-awesome/cmd/src"
 	"github.com/joho/godotenv"
 )
 
